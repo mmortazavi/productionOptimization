@@ -1,6 +1,8 @@
 # coding: utf-8
-
+import numpy as np
 # Evaluate a polynomial string
+import tensorflow
+import matplotlib.pyplot as plt
 
 def symbolize(s):
     """
@@ -13,6 +15,89 @@ def symbolize(s):
     
     return(s3)
 
+class TrainingPlot(tensorflow.keras.callbacks.Callback):
+    
+    # This function is called when the training begins
+    def on_train_begin(self, logs={}):
+        # Initialize the lists for holding the logs, losses and accuracies
+        self.losses = []
+        self.acc = []
+        self.val_losses = []
+        self.val_acc = []
+        self.logs = []
+    
+    # This function is called at the end of each epoch
+    def on_epoch_end(self, epoch, logs={}):
+        
+        # Append the logs, losses and accuracies to the lists
+        self.logs.append(logs)
+        self.losses.append(logs.get('loss'))
+        self.acc.append(logs.get('mean_squared_error'))
+        self.val_losses.append(logs.get('val_loss'))
+        self.val_acc.append(logs.get('val_mean_squared_error'))
+        
+        # Before plotting ensure at least 2 epochs have passed
+        if len(self.losses) > 1:
+            
+            # Clear the previous plot
+            clear_output(wait=True)
+            N = np.arange(0, len(self.losses))
+            
+            # You can chose the style of your preference
+            # print(plt.style.available) to see the available options
+            plt.style.use("seaborn")
+            
+            # Plot train loss, train acc, val loss and val acc against epochs passed
+            #plt.figure()
+            #subplot(nrows, ncols, plot_number) 
+            plt.figure(figsize=(15,6))
+            plt.subplot(121)
+            plt.title("Training Loss [Epoch {}]".format(epoch))
+            plt.plot(N, self.losses, label = "train_loss")
+            plt.plot(N, self.val_losses, label = "val_loss")
+            plt.xlabel("Epoch #")
+            plt.ylabel("Loss")
+            plt.legend()
+            
+            plt.subplot(122)
+            plt.title("Training Accuracy [Epoch {}]".format(epoch))
+            plt.plot(N, self.acc, label = "train_acc")
+            plt.plot(N, self.val_acc, label = "val_acc")
+            plt.xlabel("Epoch #")
+            plt.ylabel("Accuracy")
+            plt.legend()
+            plt.show()
+
+def generate_3d_data(xmin, xmax, ymin, ymax, line_mesh):
+
+    # The two-dimensional domain of the fit.
+    xmin, xmax, nx = xmin, xmax, line_mesh
+    ymin, ymax, ny = ymin, ymax, line_mesh
+    x, y = np.linspace(xmin, xmax, nx), np.linspace(ymin, ymax, ny)
+    X, Y = np.meshgrid(x, y)
+
+    # Our function to fit is going to be a sum of two-dimensional Gaussians
+    def gaussian(x, y, x0, y0, xalpha, yalpha, A):
+        return A * np.exp( -((x-x0)/xalpha)**2 -((y-y0)/yalpha)**2)
+
+    # A list of the Gaussian parameters: x0, y0, xalpha, yalpha, A
+    gprms = [(0, 2, 2.5, 5.4, 1.5),
+            (-1, 4, 6, 2.5, 1.8),
+            (-3, -0.5, 1, 2, 4),
+            (3, 0.5, 2, 1, 5)
+            ]
+
+    # Standard deviation of normally-distributed noise to add in generating
+    # our test function to fit.
+    noise_sigma = 0.1
+
+    # The function to be fit is Z.
+    Z = np.zeros(X.shape)
+    for p in gprms:
+        Z += gaussian(X, Y, *p)
+    Z += noise_sigma * np.random.randn(*Z.shape)
+
+    return X, Y, Z
 
 def eval_multinomial(s,vals=None,symbolic_eval=False):
     """
