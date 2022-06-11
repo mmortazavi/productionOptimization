@@ -153,3 +153,4 @@ dmypy.json
 cython_debug/
 
 structured_data_regressor
+venv
